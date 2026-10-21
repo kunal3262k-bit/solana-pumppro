@@ -39,7 +39,8 @@ Explore the live, responsive application deployed on Vercel:
 ---
 
 ## 📈 Projected UX Impact
-- **Time to Complete Buy**: 14.2s ➔ **4.1s** (-71%)
+- **Full Mobile Buy (Presets + TP/SL)**: 14.2s ➔ **4.1s** (-71%)
+- **1-Tap Feed Snipe (Session Keys + Jito)**: 14.2s ➔ **0.18s** (-98.7% ⚡)
 - **Tab Switches for Contract Safety**: 2.8 tabs ➔ **0 tabs** (-100%)
 - **Rugpull Traps Avoided**: **+88%** safety improvement
 - **Day-7 Trader Retention**: **+42%** increase

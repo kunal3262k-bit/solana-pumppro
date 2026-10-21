@@ -13,7 +13,8 @@ interface QuickTradePanelProps {
     amountSol: number,
     autoTp?: number,
     autoSl?: number,
-    priorityTier?: "standard" | "turbo" | "jito"
+    priorityTier?: "standard" | "turbo" | "jito",
+    useSessionKeys?: boolean
   ) => void;
 }
 
@@ -48,8 +49,9 @@ export const QuickTradePanel: React.FC<QuickTradePanelProps> = ({
     if (tradeType === "buy" && parsedAmount > walletBalanceSol) return;
 
     setIsSubmitting(true);
-    // Sub-second execution simulation depending on tier
-    const latencyMs = priorityTier === "jito" ? 180 : priorityTier === "turbo" ? 350 : 600;
+    // Sub-second execution simulation: session keys skip the 1,200ms wallet popup delay
+    const baseLatency = priorityTier === "jito" ? 180 : priorityTier === "turbo" ? 350 : 600;
+    const latencyMs = sessionKeyMode ? baseLatency : baseLatency + 1200;
 
     setTimeout(() => {
       onExecuteTrade(
@@ -57,7 +59,8 @@ export const QuickTradePanel: React.FC<QuickTradePanelProps> = ({
         parsedAmount,
         enableTp ? tpPercent : undefined,
         enableSl ? slPercent : undefined,
-        priorityTier
+        priorityTier,
+        sessionKeyMode
       );
       setIsSubmitting(false);
     }, latencyMs);

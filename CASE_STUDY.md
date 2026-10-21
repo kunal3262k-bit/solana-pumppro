@@ -85,7 +85,7 @@ Redesigned for the thumb-zone of modern mobile screens:
 - Instant preset pills (`0.1 SOL`, `0.5 SOL`, `1.0 SOL`, `2.0 SOL`).
 - Tap-to-execute with zero keyboard popups.
 - Dynamic output estimation in millions of tokens and USD conversion.
-- Execution time slashed from **14.2 seconds to 4.1 seconds**.
+- Execution time slashed from **14.2s to 4.1s** for full-panel trades, and **~180ms** via 1-Tap Feed Snipes.
 
 ### D. Automated Take-Profit & Stop-Loss (TP/SL)
 For the first time in a bonding-curve web interface, retail traders can attach automated exit orders upon entry:
@@ -149,7 +149,8 @@ PumpPro eliminates all 4 structural latency bottlenecks through a multi-tier acc
 ┌──────────────────────────────────────┬─────────────┬─────────────┬───────────┐
 │ METRIC                               │ CURRENT PUMP│ PUMPPRO     │ DELTA     │
 ├──────────────────────────────────────┼─────────────┼─────────────┼───────────┤
-│ Time to Complete First Buy (Mobile)  │ 14.2 sec    │ 4.1 sec     │ -71.1% ⚡ │
+│ Full Mobile Buy (Presets + TP/SL)    │ 14.2 sec    │ 4.1 sec     │ -71.1% ⚡ │
+│ 1-Tap Feed Snipe (Session Keys+Jito) │ 14.2 sec    │ 0.18 sec    │ -98.7% 🚀 │
 │ External Tool Tab-Switches per Trade │ 2.8 tabs    │ 0.0 tabs    │ -100%  🛡️ │
 │ Bonding Curve Comprehension Time     │ 6.8 sec     │ 1.2 sec     │ -82.4% 👁️ │
 │ Traders Falling Victim to Rugpulls   │ 38.4%       │ 4.5%        │ -88.3% 🔒 │

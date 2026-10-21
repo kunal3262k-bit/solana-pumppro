@@ -69,12 +69,32 @@ export default function Home() {
     if (positions.length === 0) return;
 
     const interval = setInterval(() => {
+      // 1. Tick token prices dynamically
+      setTokens((prevTokens) =>
+        prevTokens.map((t) => {
+          const delta = (Math.random() * 0.02 - 0.009); // +/- 1%
+          const newPriceSol = Number((t.priceSol * (1 + delta)).toFixed(11));
+          const newPriceUsd = Number((t.priceUsd * (1 + delta)).toFixed(8));
+          const newMcapSol = Number((t.marketCapSol * (1 + delta)).toFixed(1));
+          const newMcapUsd = Math.round(t.marketCapUsd * (1 + delta));
+          return {
+            ...t,
+            priceSol: newPriceSol,
+            priceUsd: newPriceUsd,
+            marketCapSol: newMcapSol,
+            marketCapUsd: newMcapUsd,
+          };
+        })
+      );
+
+      // 2. Evaluate open positions and automated TP/SL triggers cleanly
       setPositions((prevPositions) => {
-        const updated: Position[] = [];
+        const surviving: Position[] = [];
+        let solToCredit = 0;
+        const toasts: string[] = [];
 
         for (const pos of prevPositions) {
-          // Micro-fluctuation between -1.8% and +2.5%
-          const deltaPercent = (Math.random() * 4.3 - 1.8);
+          const deltaPercent = Number((Math.random() * 4.2 - 1.8).toFixed(1));
           const newPnlPercent = Number((pos.pnlPercent + deltaPercent).toFixed(1));
           const multiplier = 1 + newPnlPercent / 100;
           const currentValueSol = Number((pos.investedSol * multiplier).toFixed(3));
@@ -82,23 +102,23 @@ export default function Home() {
 
           // Check Auto Take-Profit trigger
           if (pos.autoTakeProfit && newPnlPercent >= pos.autoTakeProfit) {
-            setWalletBalanceSol((bal) => Number((bal + currentValueSol).toFixed(3)));
-            showToast(
-              `🎯 Auto Take-Profit Triggered! $${pos.tokenTicker} hit +${newPnlPercent}%! Credited +${currentValueSol} SOL`
+            solToCredit += currentValueSol;
+            toasts.push(
+              `🎯 Auto Take-Profit Executed! $${pos.tokenTicker} hit +${newPnlPercent}%! Credited +${currentValueSol} SOL`
             );
-            continue; // exit position
+            continue;
           }
 
           // Check Auto Stop-Loss trigger
           if (pos.autoStopLoss && newPnlPercent <= -pos.autoStopLoss) {
-            setWalletBalanceSol((bal) => Number((bal + currentValueSol).toFixed(3)));
-            showToast(
+            solToCredit += currentValueSol;
+            toasts.push(
               `🛡️ Auto Stop-Loss Protected Capital! $${pos.tokenTicker} stopped at ${newPnlPercent}%. Saved +${currentValueSol} SOL`
             );
-            continue; // exit position
+            continue;
           }
 
-          updated.push({
+          surviving.push({
             ...pos,
             pnlPercent: newPnlPercent,
             pnlSol,
@@ -106,7 +126,15 @@ export default function Home() {
           });
         }
 
-        return updated;
+        // Apply side effects cleanly outside state updater in microtask
+        if (solToCredit > 0) {
+          setTimeout(() => {
+            setWalletBalanceSol((bal) => Number((bal + solToCredit).toFixed(3)));
+            for (const t of toasts) showToast(t);
+          }, 0);
+        }
+
+        return surviving;
       });
     }, 3500);
 
