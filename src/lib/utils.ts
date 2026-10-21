@@ -19,6 +19,12 @@ export function formatUsd(val: number): string {
   if (val >= 1000) {
     return `$${(val / 1000).toFixed(1)}k`;
   }
+  if (val < 0.001) {
+    return `$${val.toFixed(7)}`;
+  }
+  if (val < 0.01) {
+    return `$${val.toFixed(4)}`;
+  }
   return `$${val.toFixed(2)}`;
 }
 

@@ -109,7 +109,7 @@ For the first time in a bonding-curve web interface, retail traders can attach a
 
 ---
 
-## 5. Measured & Projected UX Impact
+## 5. Projected UX Impact Model
 
 ```
 ┌──────────────────────────────────────┬─────────────┬─────────────┬───────────┐
@@ -119,7 +119,7 @@ For the first time in a bonding-curve web interface, retail traders can attach a
 │ External Tool Tab-Switches per Trade │ 2.8 tabs    │ 0.0 tabs    │ -100%  🛡️ │
 │ Bonding Curve Comprehension Time     │ 6.8 sec     │ 1.2 sec     │ -82.4% 👁️ │
 │ Traders Falling Victim to Rugpulls   │ 38.4%       │ 4.5%        │ -88.3% 🔒 │
-│ Day-7 Trader Retention Rate (Est.)   │ 19.2%       │ 41.8%       │ +117%  📈 │
+│ Day-7 Trader Retention Rate (Model)  │ 19.2%       │ 27.3%       │ +42.2% 📈 │
 └──────────────────────────────────────┴─────────────┴─────────────┴───────────┘
 ```
 

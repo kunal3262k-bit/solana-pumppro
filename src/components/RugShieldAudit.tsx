@@ -73,8 +73,12 @@ export const RugShieldAudit: React.FC<RugShieldAuditProps> = ({ token }) => {
         <div className="flex items-center justify-between p-2 rounded-lg bg-surface/50 border border-surface-border/40">
           <span className="text-zinc-400">Top 10 Supply</span>
           <span
-            className={`font-mono font-medium ${
-              token.top10HoldingPercent < 20 ? "text-emerald-400" : "text-yellow-400"
+            className={`font-mono font-bold ${
+              token.top10HoldingPercent < 15
+                ? "text-emerald-400"
+                : token.top10HoldingPercent < 25
+                ? "text-yellow-400"
+                : "text-rose-400"
             }`}
           >
             {token.top10HoldingPercent}%
@@ -84,9 +88,15 @@ export const RugShieldAudit: React.FC<RugShieldAuditProps> = ({ token }) => {
         {/* Vector 3: Mint Authority */}
         <div className="flex items-center justify-between p-2 rounded-lg bg-surface/50 border border-surface-border/40">
           <span className="text-zinc-400">Mint Auth</span>
-          <span className="text-emerald-400 flex items-center gap-1 font-medium">
-            <CheckCircle2 size={12} /> Revoked
-          </span>
+          {token.mintAuthRevoked ? (
+            <span className="text-emerald-400 flex items-center gap-1 font-medium">
+              <CheckCircle2 size={12} /> Revoked
+            </span>
+          ) : (
+            <span className="text-rose-400 flex items-center gap-1 font-medium">
+              <XCircle size={12} /> Active
+            </span>
+          )}
         </div>
 
         {/* Vector 4: Freeze Authority */}

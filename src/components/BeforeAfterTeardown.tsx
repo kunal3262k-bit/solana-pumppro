@@ -23,7 +23,7 @@ export const BeforeAfterTeardown: React.FC = () => {
       title: "3. Clunky Multi-Step Trade Flow",
       before: "3 separate dialog popups, keyboard typing for small amounts, manually selecting slippage every trade.",
       after: "1-Thumb Quick-Buy Pill Bar (0.1, 0.5, 1, 2 SOL) with pre-calibrated smart slippage.",
-      impact: "Trade execution time reduced from 8.2s to 1.1s.",
+      impact: "Trade execution time reduced from 14.2s to 4.1s.",
     },
     {
       title: "4. Post-Purchase Screen Babysitting",
@@ -161,9 +161,9 @@ export const BeforeAfterTeardown: React.FC = () => {
           <h3 className="text-base font-bold text-white">Quantifiable UX Impact Targets</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
             <div className="rounded-xl border border-surface-border bg-surface-card p-4 text-center space-y-1">
-              <div className="text-2xl font-extrabold font-mono text-brand-neon">-86%</div>
+              <div className="text-2xl font-extrabold font-mono text-brand-neon">-71%</div>
               <div className="text-xs text-zinc-400 font-medium">Trade Latency</div>
-              <div className="text-[10px] text-zinc-500">From 8.2s to 1.1s</div>
+              <div className="text-[10px] text-zinc-500">From 14.2s to 4.1s</div>
             </div>
             <div className="rounded-xl border border-surface-border bg-surface-card p-4 text-center space-y-1">
               <div className="text-2xl font-extrabold font-mono text-emerald-400">+42%</div>

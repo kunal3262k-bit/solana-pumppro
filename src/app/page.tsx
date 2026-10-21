@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { TokenCard } from "@/components/TokenCard";
 import { QuickTradePanel } from "@/components/QuickTradePanel";
@@ -8,7 +8,7 @@ import { RugShieldAudit } from "@/components/RugShieldAudit";
 import { BondingCurveRing } from "@/components/BondingCurveRing";
 import { BeforeAfterTeardown } from "@/components/BeforeAfterTeardown";
 import { MOCK_TOKENS } from "@/lib/mock-data";
-import { Token, Position, TradeHistoryItem } from "@/lib/types";
+import { Token, Position } from "@/lib/types";
 import { formatSol, formatUsd, truncateAddress } from "@/lib/utils";
 import {
   TrendingUp,
@@ -16,26 +16,25 @@ import {
   Zap,
   Flame,
   Search,
-  ExternalLink,
   Layers,
-  ArrowRight,
   Sparkles,
-  BarChart3,
   Clock,
-  CheckCircle2,
-  XCircle,
-  HelpCircle,
+  ArrowRight,
+  TrendingDown,
 } from "lucide-react";
 
 export default function Home() {
   const [activeView, setActiveView] = useState<"prototype" | "teardown">("prototype");
   const [tokens, setTokens] = useState<Token[]>(MOCK_TOKENS);
-  const [selectedToken, setSelectedToken] = useState<Token>(MOCK_TOKENS[0]);
+  const [selectedTokenId, setSelectedTokenId] = useState<string>(MOCK_TOKENS[0].id);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [walletBalanceSol, setWalletBalanceSol] = useState<number>(24.85);
   const [positions, setPositions] = useState<Position[]>([]);
   const [tradeNotification, setTradeNotification] = useState<string | null>(null);
+
+  // Derived selected token synced directly with tokens state array
+  const selectedToken = tokens.find((t) => t.id === selectedTokenId) || tokens[0];
 
   // Filter tokens based on category and search query
   const filteredTokens = tokens.filter((token) => {
@@ -62,8 +61,57 @@ export default function Home() {
     setTradeNotification(msg);
     setTimeout(() => {
       setTradeNotification(null);
-    }, 4000);
+    }, 4500);
   };
+
+  // Real-time market tick simulator & automated TP/SL execution loop
+  useEffect(() => {
+    if (positions.length === 0) return;
+
+    const interval = setInterval(() => {
+      setPositions((prevPositions) => {
+        const updated: Position[] = [];
+
+        for (const pos of prevPositions) {
+          // Micro-fluctuation between -1.8% and +2.5%
+          const deltaPercent = (Math.random() * 4.3 - 1.8);
+          const newPnlPercent = Number((pos.pnlPercent + deltaPercent).toFixed(1));
+          const multiplier = 1 + newPnlPercent / 100;
+          const currentValueSol = Number((pos.investedSol * multiplier).toFixed(3));
+          const pnlSol = Number((currentValueSol - pos.investedSol).toFixed(3));
+
+          // Check Auto Take-Profit trigger
+          if (pos.autoTakeProfit && newPnlPercent >= pos.autoTakeProfit) {
+            setWalletBalanceSol((bal) => Number((bal + currentValueSol).toFixed(3)));
+            showToast(
+              `🎯 Auto Take-Profit Triggered! $${pos.tokenTicker} hit +${newPnlPercent}%! Credited +${currentValueSol} SOL`
+            );
+            continue; // exit position
+          }
+
+          // Check Auto Stop-Loss trigger
+          if (pos.autoStopLoss && newPnlPercent <= -pos.autoStopLoss) {
+            setWalletBalanceSol((bal) => Number((bal + currentValueSol).toFixed(3)));
+            showToast(
+              `🛡️ Auto Stop-Loss Protected Capital! $${pos.tokenTicker} stopped at ${newPnlPercent}%. Saved +${currentValueSol} SOL`
+            );
+            continue; // exit position
+          }
+
+          updated.push({
+            ...pos,
+            pnlPercent: newPnlPercent,
+            pnlSol,
+            currentValueSol,
+          });
+        }
+
+        return updated;
+      });
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [positions.length]);
 
   const handleExecuteTrade = (
     type: "buy" | "sell",
@@ -77,7 +125,7 @@ export default function Home() {
         return;
       }
 
-      const newBalance = walletBalanceSol - amountSol;
+      const newBalance = Number((walletBalanceSol - amountSol).toFixed(3));
       setWalletBalanceSol(newBalance);
 
       const tokensPurchased = amountSol / selectedToken.priceSol;
@@ -100,11 +148,11 @@ export default function Home() {
 
       setPositions((prev) => [newPosition, ...prev]);
 
-      // Update bonding curve slightly for realistic responsiveness
+      // Update bonding curve dynamically
       setTokens((prev) =>
         prev.map((t) => {
           if (t.id === selectedToken.id) {
-            const addedPercent = Math.min(100, Math.round(t.bondingCurvePercent + amountSol * 1.2));
+            const addedPercent = Math.min(100, Math.round(t.bondingCurvePercent + amountSol * 1.5));
             return {
               ...t,
               bondingCurvePercent: addedPercent,
@@ -121,16 +169,20 @@ export default function Home() {
       // Sell logic
       const posIndex = positions.findIndex((p) => p.tokenId === selectedToken.id);
       if (posIndex === -1) {
-        showToast(`No open position found for ${selectedToken.ticker}`);
+        showToast(`No open position found for $${selectedToken.ticker}`);
         return;
       }
 
       const positionToClose = positions[posIndex];
-      const returnedSol = positionToClose.investedSol * 1.05; // simulated 5% profit
-      setWalletBalanceSol((prev) => prev + returnedSol);
+      const returnedSol = positionToClose.currentValueSol;
+      setWalletBalanceSol((prev) => Number((prev + returnedSol).toFixed(3)));
       setPositions((prev) => prev.filter((_, idx) => idx !== posIndex));
 
-      showToast(`Sold position in ${selectedToken.ticker} for +${returnedSol.toFixed(2)} SOL (+5.0%)!`);
+      showToast(
+        `Sold position in $${selectedToken.ticker} for +${returnedSol.toFixed(2)} SOL (${
+          positionToClose.pnlPercent >= 0 ? "+" : ""
+        }${positionToClose.pnlPercent}%)!`
+      );
     }
   };
 
@@ -138,13 +190,13 @@ export default function Home() {
     const pos = positions.find((p) => p.id === positionId);
     if (!pos) return;
 
-    setWalletBalanceSol((prev) => prev + pos.currentValueSol);
+    setWalletBalanceSol((prev) => Number((prev + pos.currentValueSol).toFixed(3)));
     setPositions((prev) => prev.filter((p) => p.id !== positionId));
-    showToast(`Closed position in ${pos.tokenTicker}: +${pos.currentValueSol.toFixed(2)} SOL credited!`);
+    showToast(`Closed position in $${pos.tokenTicker}: +${pos.currentValueSol.toFixed(2)} SOL credited!`);
   };
 
   return (
-    <div className="min-h-screen bg-background text-zinc-100 flex flex-col">
+    <div className="min-h-screen bg-background text-zinc-100 flex flex-col pb-24 lg:pb-0">
       {/* Top Navigation */}
       <Header
         walletBalanceSol={walletBalanceSol}
@@ -155,7 +207,7 @@ export default function Home() {
 
       {/* Floating Notification */}
       {tradeNotification && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-brand-neon px-4 py-3 text-xs font-bold font-mono text-zinc-950 shadow-2xl animate-bounce">
+        <div className="fixed bottom-20 lg:bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-brand-neon px-4 py-3 text-xs font-bold font-mono text-zinc-950 shadow-2xl animate-bounce">
           <Zap size={16} />
           <span>{tradeNotification}</span>
         </div>
@@ -205,13 +257,13 @@ export default function Home() {
                     <button
                       key={item.val}
                       onClick={() => setSelectedCategory(item.val)}
-                      className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-semibold transition-all border ${
+                      className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition-all border ${
                         isActive
                           ? "border-brand-neon bg-brand-neon/10 text-brand-neon shadow-sm"
                           : "border-surface-border bg-surface hover:border-zinc-700 text-zinc-400 hover:text-zinc-200"
                       }`}
                     >
-                      <Icon size={13} />
+                      <Icon size={14} />
                       {item.label}
                     </button>
                   );
@@ -223,10 +275,11 @@ export default function Home() {
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
                 <input
                   type="text"
+                  aria-label="Search token or ticker"
                   placeholder="Search token or ticker..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-surface-border bg-surface pl-9 pr-4 py-1.5 text-xs font-mono text-white placeholder-zinc-500 focus:border-brand-neon focus:outline-none"
+                  className="w-full rounded-xl border border-surface-border bg-surface pl-9 pr-4 py-2 text-xs font-mono text-white placeholder-zinc-500 focus:border-brand-neon focus:outline-none"
                 />
               </div>
             </div>
@@ -355,7 +408,7 @@ export default function Home() {
                         key={token.id}
                         token={token}
                         isSelected={selectedToken.id === token.id}
-                        onSelect={setSelectedToken}
+                        onSelect={(t) => setSelectedTokenId(t.id)}
                       />
                     ))}
                   </div>
@@ -380,51 +433,74 @@ export default function Home() {
                         Active Positions ({positions.length})
                       </h3>
                     </div>
-                    <span className="text-[10px] text-zinc-400 font-mono">Auto TP/SL Active</span>
+                    <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-brand-neon animate-pulse" />
+                      Live PnL Engine
+                    </span>
                   </div>
 
                   {positions.length === 0 ? (
                     <div className="py-8 text-center text-zinc-500 text-xs font-mono">
                       <p>No active positions.</p>
                       <p className="text-[11px] mt-1 text-zinc-600">
-                        Use Quick Buy above to test 1-tap trade execution.
+                        Use Quick Buy above to test real-time TP/SL execution.
                       </p>
                     </div>
                   ) : (
                     <div className="mt-3 space-y-2.5">
-                      {positions.map((pos) => (
-                        <div
-                          key={pos.id}
-                          className="rounded-xl border border-surface-border/80 bg-surface-card p-3 font-mono text-xs flex items-center justify-between"
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white">${pos.tokenTicker}</span>
-                              <span className="text-[10px] text-zinc-400">
-                                {pos.investedSol.toFixed(2)} SOL
-                              </span>
+                      {positions.map((pos) => {
+                        const isProfitable = pos.pnlPercent >= 0;
+                        return (
+                          <div
+                            key={pos.id}
+                            className="rounded-xl border border-surface-border/80 bg-surface-card p-3 font-mono text-xs flex items-center justify-between transition-all"
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-white">${pos.tokenTicker}</span>
+                                <span className="text-[10px] text-zinc-400">
+                                  {pos.investedSol.toFixed(2)} SOL
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-zinc-500 mt-1 flex flex-wrap gap-2">
+                                {pos.autoTakeProfit && (
+                                  <span className="text-emerald-400 bg-emerald-500/10 px-1 rounded">
+                                    TP Target: +{pos.autoTakeProfit}%
+                                  </span>
+                                )}
+                                {pos.autoStopLoss && (
+                                  <span className="text-rose-400 bg-rose-500/10 px-1 rounded">
+                                    SL Stop: -{pos.autoStopLoss}%
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-[10px] text-zinc-500 mt-0.5">
-                              {pos.autoTakeProfit && (
-                                <span className="text-emerald-400 mr-2">TP: +{pos.autoTakeProfit}%</span>
-                              )}
-                              {pos.autoStopLoss && (
-                                <span className="text-rose-400">SL: -{pos.autoStopLoss}%</span>
-                              )}
-                            </div>
-                          </div>
 
-                          <div className="flex items-center gap-2">
-                            <span className="text-emerald-400 font-bold text-xs">+{pos.pnlPercent}%</span>
-                            <button
-                              onClick={() => handleClosePosition(pos.id)}
-                              className="px-2 py-1 rounded bg-surface border border-surface-border hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/40 text-[10px] font-bold text-zinc-300 transition-colors"
-                            >
-                              Exit
-                            </button>
+                            <div className="flex items-center gap-2.5">
+                              <div className="text-right">
+                                <div
+                                  className={`font-bold text-xs flex items-center gap-0.5 ${
+                                    isProfitable ? "text-emerald-400" : "text-rose-400"
+                                  }`}
+                                >
+                                  {isProfitable ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                                  {isProfitable ? "+" : ""}
+                                  {pos.pnlPercent}%
+                                </div>
+                                <div className="text-[10px] text-zinc-400">
+                                  {pos.currentValueSol.toFixed(2)} SOL
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleClosePosition(pos.id)}
+                                className="px-2.5 py-1.5 rounded-lg bg-surface border border-surface-border hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/40 text-[10px] font-bold text-zinc-300 transition-colors"
+                              >
+                                Exit
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -451,6 +527,43 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Sticky Mobile 1-Thumb Quick-Buy Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 border-t border-surface-border p-3 backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <img
+              src={selectedToken.image}
+              alt={selectedToken.name}
+              className="h-9 w-9 rounded-lg object-cover border border-surface-border"
+            />
+            <div className="truncate">
+              <div className="text-xs font-bold text-white truncate">${selectedToken.ticker}</div>
+              <div className="text-[10px] font-mono text-brand-neon">
+                {selectedToken.bondingCurvePercent}% Raydium
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {[0.1, 0.5, 1.0].map((preset) => (
+              <button
+                key={preset}
+                onClick={() => handleExecuteTrade("buy", preset, 100, 20)}
+                className="px-2.5 py-2 rounded-xl bg-surface-card border border-surface-border text-xs font-mono font-bold text-zinc-200 hover:border-brand-neon active:scale-95 transition-all"
+              >
+                {preset} SOL
+              </button>
+            ))}
+            <button
+              onClick={() => handleExecuteTrade("buy", 0.5, 100, 20)}
+              className="px-3.5 py-2 rounded-xl bg-brand-neon text-zinc-950 text-xs font-mono font-extrabold shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-1"
+            >
+              <Zap size={14} /> Buy
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Footer */}
       <footer className="border-t border-surface-border bg-surface/50 py-6 text-center text-xs text-zinc-500 font-mono">
