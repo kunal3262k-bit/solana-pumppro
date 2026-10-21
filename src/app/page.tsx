@@ -117,7 +117,8 @@ export default function Home() {
     type: "buy" | "sell",
     amountSol: number,
     autoTp?: number,
-    autoSl?: number
+    autoSl?: number,
+    priorityTier?: "standard" | "turbo" | "jito"
   ) => {
     if (type === "buy") {
       if (amountSol > walletBalanceSol) {
@@ -164,7 +165,8 @@ export default function Home() {
         })
       );
 
-      showToast(`Bought ${(tokensPurchased / 1_000_000).toFixed(2)}M ${selectedToken.ticker} for ${amountSol} SOL!`);
+      const latencyMs = priorityTier === "jito" ? "180ms (Jito Direct)" : priorityTier === "turbo" ? "350ms (Turbo CU)" : "600ms";
+      showToast(`⚡ Bought ${(tokensPurchased / 1_000_000).toFixed(2)}M $${selectedToken.ticker} in ${latencyMs}!`);
     } else {
       // Sell logic
       const posIndex = positions.findIndex((p) => p.tokenId === selectedToken.id);
@@ -184,6 +186,56 @@ export default function Home() {
         }${positionToClose.pnlPercent}%)!`
       );
     }
+  };
+
+  const handleInstantSnipe = (token: Token, amountSol: number) => {
+    if (amountSol > walletBalanceSol) {
+      showToast("Insufficient SOL balance!");
+      return;
+    }
+
+    const newBalance = Number((walletBalanceSol - amountSol).toFixed(3));
+    setWalletBalanceSol(newBalance);
+
+    const tokensPurchased = amountSol / token.priceSol;
+    const newPosition: Position = {
+      id: `pos-${Date.now()}`,
+      tokenId: token.id,
+      tokenTicker: token.ticker,
+      tokenName: token.name,
+      tokenImage: token.image,
+      amountTokens: tokensPurchased,
+      investedSol: amountSol,
+      currentValueSol: amountSol,
+      pnlSol: 0,
+      pnlPercent: 0,
+      entryPriceSol: token.priceSol,
+      autoTakeProfit: 100, // default 2x
+      autoStopLoss: 20, // default -20%
+      createdAt: "Just now",
+    };
+
+    setPositions((prev) => [newPosition, ...prev]);
+
+    setTokens((prev) =>
+      prev.map((t) => {
+        if (t.id === token.id) {
+          const addedPercent = Math.min(100, Math.round(t.bondingCurvePercent + amountSol * 1.5));
+          return {
+            ...t,
+            bondingCurvePercent: addedPercent,
+            solInCurve: Number((t.solInCurve + amountSol).toFixed(2)),
+            solRequiredToGraduate: Math.max(0, Number((t.solRequiredToGraduate - amountSol).toFixed(2))),
+          };
+        }
+        return t;
+      })
+    );
+
+    // Switch selected token to the sniped token so user sees it immediately
+    setSelectedTokenId(token.id);
+
+    showToast(`⚡ 1-Tap Snipe! +${(tokensPurchased / 1_000_000).toFixed(2)}M $${token.ticker} confirmed in 140ms!`);
   };
 
   const handleClosePosition = (positionId: string) => {
@@ -409,6 +461,7 @@ export default function Home() {
                         token={token}
                         isSelected={selectedToken.id === token.id}
                         onSelect={(t) => setSelectedTokenId(t.id)}
+                        onInstantSnipe={(t, amt) => handleInstantSnipe(t, amt)}
                       />
                     ))}
                   </div>

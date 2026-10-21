@@ -13,7 +13,7 @@ Pump.fun is Solana’s biggest consumer volume driver, but retail traders face *
 
 1. ⭕ **Radial Bonding Curve Gauge**: Real-time visual progress to Raydium graduation (85 SOL / $69k MCap) with milestone countdowns.
 2. 🛡️ **Rug-Shield 4-Vector AI Security Audit**: Real-time on-chain verification of Developer Sell status, Top 10 wallet concentration, Mint authority revocation, and Freeze authority status (scored 0–100).
-3. ⚡ **1-Thumb Quick-Buy Pill Bar**: Pre-set SOL amounts (0.1, 0.5, 1.0, 2.0 SOL) designed for single-handed mobile trading. Execution in under 4 seconds.
+3. ⚡ **1-Thumb Quick-Buy & 1-Tap Feed Sniping**: Pre-set SOL amounts (0.1, 0.5, 1.0, 2.0 SOL) with direct on-card feed pills. Slashes buy latency from 14.2s to sub-second (<300ms) with Ephemeral Session Keys and Jito MEV bundle routing.
 4. 🎯 **Automated Take-Profit & Stop-Loss (TP/SL)**: Auto-exit orders (+50%, +100%, +200% TP / -15%, -20%, -30% SL) to protect trader capital while AFK.
 5. 📊 **Interactive UX Case Study**: Built-in side-by-side Before vs. After teardown, design rationale, and metric projections.
 

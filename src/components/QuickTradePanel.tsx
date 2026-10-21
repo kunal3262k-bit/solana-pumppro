@@ -1,14 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-import { Zap, ArrowUpDown, Check, Sliders, Shield, AlertCircle } from "lucide-react";
+import { Zap, Shield, Sparkles, Cpu, Clock, Check } from "lucide-react";
 import { Token } from "@/lib/types";
 import { formatSol, formatUsd } from "@/lib/utils";
 
 interface QuickTradePanelProps {
   token: Token;
   walletBalanceSol: number;
-  onExecuteTrade: (type: "buy" | "sell", amountSol: number, autoTp?: number, autoSl?: number) => void;
+  onExecuteTrade: (
+    type: "buy" | "sell",
+    amountSol: number,
+    autoTp?: number,
+    autoSl?: number,
+    priorityTier?: "standard" | "turbo" | "jito"
+  ) => void;
 }
 
 export const QuickTradePanel: React.FC<QuickTradePanelProps> = ({
@@ -24,10 +30,17 @@ export const QuickTradePanel: React.FC<QuickTradePanelProps> = ({
   const [slPercent, setSlPercent] = useState<number>(20); // -20%
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  // Advanced Latency Reduction Controls
+  const [sessionKeyMode, setSessionKeyMode] = useState<boolean>(true);
+  const [priorityTier, setPriorityTier] = useState<"standard" | "turbo" | "jito">("jito");
+
   const parsedAmount = parseFloat(amountSol) || 0;
   const estimatedTokens = parsedAmount > 0 && token.priceSol > 0 ? parsedAmount / token.priceSol : 0;
 
   const solPresets = [0.1, 0.5, 1.0, 2.0];
+
+  const latencyEstimate =
+    priorityTier === "jito" ? "280ms" : priorityTier === "turbo" ? "650ms" : "1,400ms";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,15 +48,19 @@ export const QuickTradePanel: React.FC<QuickTradePanelProps> = ({
     if (tradeType === "buy" && parsedAmount > walletBalanceSol) return;
 
     setIsSubmitting(true);
+    // Sub-second execution simulation depending on tier
+    const latencyMs = priorityTier === "jito" ? 180 : priorityTier === "turbo" ? 350 : 600;
+
     setTimeout(() => {
       onExecuteTrade(
         tradeType,
         parsedAmount,
         enableTp ? tpPercent : undefined,
-        enableSl ? slPercent : undefined
+        enableSl ? slPercent : undefined,
+        priorityTier
       );
       setIsSubmitting(false);
-    }, 400);
+    }, latencyMs);
   };
 
   return (
@@ -75,6 +92,71 @@ export const QuickTradePanel: React.FC<QuickTradePanelProps> = ({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Latency Reduction Bar: Jito Direct + Session Key */}
+        <div className="rounded-xl border border-brand-purple/40 bg-brand-purple/10 p-2.5 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1.5 font-bold text-white">
+              <Cpu size={14} className="text-brand-neon" />
+              Sub-Second Execution Engine
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand-neon/20 text-brand-neon font-bold">
+              ~{latencyEstimate}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-brand-purple/20">
+            {/* Priority Tier Pills */}
+            <div className="flex items-center gap-1 font-mono">
+              <button
+                type="button"
+                onClick={() => setPriorityTier("standard")}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                  priorityTier === "standard"
+                    ? "bg-surface-card border border-zinc-500 text-white"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                Normal
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriorityTier("turbo")}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                  priorityTier === "turbo"
+                    ? "bg-brand-purple text-white shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                Turbo (+0.001)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriorityTier("jito")}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all flex items-center gap-1 ${
+                  priorityTier === "jito"
+                    ? "bg-brand-neon text-zinc-950 font-extrabold shadow-sm"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Zap size={10} /> Jito Direct
+              </button>
+            </div>
+
+            {/* Session Key Toggle */}
+            <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-zinc-300 font-mono">
+              <input
+                type="checkbox"
+                checked={sessionKeyMode}
+                onChange={(e) => setSessionKeyMode(e.target.checked)}
+                className="rounded border-zinc-700 bg-zinc-900 text-brand-neon focus:ring-0 h-3 w-3"
+              />
+              <span title="Uses pre-authorized ephemeral session key to skip wallet popup confirmations">
+                0-Popup
+              </span>
+            </label>
+          </div>
+        </div>
+
         {/* Preset Amount Pills (Thumb-Optimized) */}
         <div>
           <div className="flex justify-between text-[11px] text-zinc-400 mb-2">
@@ -201,12 +283,15 @@ export const QuickTradePanel: React.FC<QuickTradePanelProps> = ({
         >
           {isSubmitting ? (
             <span className="flex items-center gap-2">
-              <Zap size={16} className="animate-spin" /> Routing via Pump Curve...
+              <Zap size={16} className="animate-spin" />
+              {priorityTier === "jito" ? "Routing via Jito Direct..." : "Broadcasting Transaction..."}
             </span>
           ) : (
             <>
               <Zap size={16} />
-              {tradeType === "buy" ? `1-Tap Buy ${token.ticker}` : `Sell ${token.ticker}`}
+              {tradeType === "buy"
+                ? `1-Tap Buy ${token.ticker} (~${latencyEstimate})`
+                : `Sell ${token.ticker}`}
             </>
           )}
         </button>
